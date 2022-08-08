@@ -41,6 +41,7 @@ if ( ! class_exists( 'Daftra' ) ) :
 		 */
 		public $settings;
 
+
 		/**
 		 * Throw error on object clone.
 		 *
@@ -78,16 +79,16 @@ if ( ! class_exists( 'Daftra' ) ) :
 		 */
 		public static function instance() {
 			if ( ! isset( self::$instance ) && ! ( self::$instance instanceof Daftra ) ) {
-				self::$instance					= new Daftra;
+				self::$instance					   = new Daftra;
 				self::$instance->base_hooks();
 				self::$instance->includes();
-				self::$instance->helpers		= new Daftra_Helpers();
-				self::$instance->settings		= new Daftra_Settings();
-				self::$instance->crb			= new Daftra_Dashboard();
+				self::$instance->helpers		   = new Daftra_Helpers();
+				self::$instance->settings		   = new Daftra_Settings();
+				self::$instance->crb			   = new Daftra_Dashboard();
 
 				//Fire the plugin logic
 				new Daftra_Run();
-
+				new Daftra_Sync();
 				/**
 				 * Fire a custom action to allow dependencies
 				 * after the successful plugin setup
@@ -109,8 +110,8 @@ if ( ! class_exists( 'Daftra' ) ) :
 			require_once DAFTRA_PLUGIN_DIR . 'includes/classes/class-helpers.php';
 			require_once DAFTRA_PLUGIN_DIR . 'includes/classes/class-settings.php';
 			require_once DAFTRA_PLUGIN_DIR . 'includes/classes/class-run.php';
-
 			require_once DAFTRA_PLUGIN_DIR . 'includes/classes/class-dashboard.php';
+			require_once DAFTRA_PLUGIN_DIR . 'includes/classes/class-sync.php';
 		}
 
 		/**
