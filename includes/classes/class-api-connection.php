@@ -177,7 +177,7 @@ class Daftra_API{
 		if( empty( $client_id ) ) {
 			$client_id = $order->get_user_id();
 		}
-		$total_paid = '';
+		$total_paid = 0;
 		if( $paid === true ){
 			$total_paid = $order->get_total();
 		}
@@ -202,11 +202,11 @@ class Daftra_API{
 				$regular_price = $product->get_regular_price();
 				$sale_price = $product->get_sale_price();
 				$price = $product->get_price();
-				$description = $product->description;
+				$description = strip_tags( apply_filters( 'woocommerce_short_description', $product->get_short_description()) );
 				$InvoiceItem[] = [
 					"invoice_id"=> $order->get_id(),
 					"item"=> $product_name,
-					"description"=> $description,
+					"description"=> substr( $description, 0, 40 ),
 					"unit_price"=> $price,
 					"quantity"=> $quantity,
 					"product_id"=> $product_id,
@@ -270,7 +270,8 @@ class Daftra_API{
 					"amount"=> $total_paid,
 					"transaction_id"=> $order->get_transaction_id(),
 					"date"=> $date,
-					"staff_id"=> 0
+					"staff_id"=> 0,
+					"status" => 1
 				  ]
 				],
 				// "InvoiceCustomField"=> [],
@@ -300,14 +301,151 @@ class Daftra_API{
 	 * @param  mixed $daftra_invoice_id
 	 * @return void
 	 */
-	public function delete_invoice( $order_id, $daftra_invoice_id ){
+	public static function delete_invoice( $order_id, $daftra_invoice_id ){
         
 		if( !empty( $daftra_invoice_id ) ) { 
 			$method = 'DELETE' ;
 			$url = self::get_endpoitn_url( 'invoices/'.$daftra_invoice_id );
 			$daftra_invoice = self::create_connection( $url, $method  );
+			delete_post_meta( $order_id, 'daftra_invoice_id', $daftra_invoice_id );
 			return $daftra_invoice;
 		}
+		
+	}
+	
+	/**
+	 * refund_receipts
+	 *
+	 * @param  mixed $order_id
+	 * @param  mixed $daftra_invoice_id
+	 * @return void
+	 */
+	public static function add_refund_receipts( $order_id, $daftra_invoice_id, $refund_id = 0, $paid = true ){
+
+		if( !empty( $daftra_invoice_id ) ) { 
+			$method = 'POST' ;
+			$url = self::get_endpoitn_url( 'refund_receipts' );
+			$order = wc_get_order( $order_id );
+		    $client_id = get_user_meta( $order->get_user_id(), 'daftra_user_id', true );
+
+		if( empty( $client_id ) ) {
+			$client_id = $order->get_user_id();
+		}
+		$total_paid = 0;
+		if( $paid === true ){
+			$total_paid = $order->get_total();
+		}
+
+		if( $order ) {
+			// Get and Loop Over Order Items
+			foreach ( $order->get_items() as $item_id => $item ) {
+				$product_id = $item->get_product_id();
+				$variation_id = $item->get_variation_id();
+				$product = $item->get_product(); // see link above to get $product info
+				$product_name = $item->get_name();
+				$quantity = $item->get_quantity();
+				$subtotal = $item->get_subtotal();
+				$total = $item->get_total();
+				$tax = $item->get_subtotal_tax();
+				$tax_class = $item->get_tax_class();
+				$tax_status = $item->get_tax_status();
+				$allmeta = $item->get_meta_data();
+				$somemeta = $item->get_meta( '_whatever', true );
+				$item_type = $item->get_type(); // e.g. "line_item"
+				$product = wc_get_product( $product_id );
+				$regular_price = $product->get_regular_price();
+				$sale_price = $product->get_sale_price();
+				$price = $product->get_price();
+				$description = strip_tags( apply_filters( 'woocommerce_short_description', $product->get_short_description()) );
+				$InvoiceItem[] = [
+					"invoice_id"=> $daftra_invoice_id,
+					"item"=> $product_name,
+					"description"=> substr( $description, 0, 40 ),
+					"unit_price"=> $price,
+					"quantity"=> $quantity,
+					"product_id"=> $product_id,
+				];
+			}
+			$InvoiceItem = array_values( $InvoiceItem ); 
+			$currency_code = $order->get_currency();
+            $currency_symbol = get_woocommerce_currency_symbol( $currency_code );
+			$date_modified = $order->get_date_modified();
+			$date = $date_modified->date("Y-m-d, g:i:s A T");
+			$body_json = [
+				"RefundReceipt"=> [
+					"staff_id"=> 0,
+					"subscription_id"=> null,
+					"store_id"=> 0,
+					"no"=> "",
+					"po_number"=> $order->get_order_number(),
+					"name"=> $product_name,
+					"client_id"=> $client_id,
+					"is_offline"=> true,
+					"currency_code"=> $currency_code,
+					"client_business_name"=> $order->get_billing_first_name() . ' ' . $order->get_billing_last_name(),
+					"client_first_name"=> $order->get_billing_first_name(),
+					"client_last_name"=> $order->get_billing_last_name(),
+					"client_email"=> $order->get_billing_email(),
+					"client_address1"=> $order->get_billing_address_1(),
+					"client_address2"=> $order->get_billing_address_2(),
+					"client_postal_code"=> $order->get_billing_postcode(),
+					"client_city"=> $order->get_billing_city(),
+					"client_state"=> $order->get_billing_state(),
+					"client_country_code"=> $order->get_billing_country(),
+					"date"=> $date,
+					"draft"=> "0",
+					"discount"=> "",
+					"discount_amount"=> $order->get_discount_total(),
+					"deposit"=> 0,
+					"deposit_type"=> 0,
+					"notes"=> $order->get_customer_note(),
+					"html_notes"=> "",
+					"invoice_layout_id"=> 1,
+					"estimate_id"=> 0,
+					"shipping_options"=> "",
+					"shipping_amount"=> null,
+					"client_active_secondary_address"=> false,
+					"client_secondary_name"=> "",
+					"client_secondary_address1"=> "",
+					"client_secondary_address2"=> "",
+					"client_secondary_city"=> "",
+					"client_secondary_state"=> "",
+					"client_secondary_postal_code"=> "",
+					"client_secondary_country_code"=> "",
+					"follow_up_status"=> null,
+					"work_order_id"=> null,
+					"requisition_delivery_status"=> null,
+					"pos_shift_id"=> null
+				],
+				"InvoiceItem"=> $InvoiceItem ,
+				"InvoicePayment"=> [
+				  [
+					"invoice_id" => $daftra_invoice_id,
+					"payment_method"=> $order->get_payment_method_title(),
+					"amount"=> $total_paid,
+					"transaction_id"=> $order->get_transaction_id(),
+					"date"=> $date,
+					"staff_id"=> 0,
+					// "status" => 1
+				  ]
+				],
+				// "InvoiceCustomField"=> [],
+				// "Deposit"=> [],
+				// "InvoiceReminder"=> [],
+				// "Document"=> [],
+				// "DocumentTitle"=> []
+			  ];
+
+            //  return $body_json;
+
+			$refund_receipts = self::create_connection( $url, $method, json_encode( $body_json )  );
+			if( !empty( $refund_receipts->code ) && $refund_receipts->code  === 202 ) {
+				$daftra_invoice_id = $refund_receipts->id;
+				update_post_meta( $order_id, 'daftra_invoice_refund_id', $daftra_invoice_id );
+			}
+			return $refund_receipts;
+		  }
+	   }
 		
 	}
 

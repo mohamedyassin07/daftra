@@ -46,7 +46,9 @@ var SyncDaftra = function () {
  
         },
         error: function(response) {  
-            console.log(response);
+            $('.sync__loader').hide();
+            $('.sync__msg_error').html("<p> " + response.responseText + " </p> ").show();
+            console.log(response.responseText);
         },
     });
 }

@@ -43,7 +43,7 @@ class Daftra_Dashboard{
      */
     public function load_carbon_fields()
     {
-        require_once DGENNY_PLUGIN_DIR . 'libs/carbon-fields/vendor/autoload.php';
+        require_once DAFTRA_PLUGIN_DIR . 'libs/carbon-fields/vendor/autoload.php';
         \Carbon_Fields\Carbon_Fields::boot();
     }
 
@@ -133,7 +133,7 @@ class Daftra_Dashboard{
         if( isset( $_POST['sync_users'] )  && $_POST['sync_users'] === 'true' ){
             // get 10 user don't have daftra_user_id
             $args = array(
-                'role' => 'customer',
+                // 'role' => 'customer',
                 'number' => $sync_number,
                 'meta_query' => array(
                     array(
@@ -149,14 +149,14 @@ class Daftra_Dashboard{
                 // loop through each author
                 foreach ($authors as $author){
                     // get all the user's data
-                    $sync_user = Daftra_Sync::profile_update( $author->ID );
+                    $sync_user = Daftra_Sync::sync_user( $author->ID );
                 }
                 
                 //not_completed;
                 echo wp_send_json( array(
                     'repeat'=> true, 
                     'success' => null , 
-                    'msg' => 'Done Sync '.$sync_number.' Users',
+                    'msg' => 'Done Sync '. count( $authors ) .' Users',
                     'response' => $sync_user,  
                 ) );
             
